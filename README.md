@@ -1,22 +1,22 @@
-Este es el documento que define la identidad de tu paquete. Está diseñado para que cualquier desarrollador (o tú mismo en el futuro) entienda que este paquete es el **puente inteligente** entre Laravel y las tablas dinámicas.
+¡Tienes toda la razón! El paquete ha pasado de ser un simple filtro de fechas a un **motor de datos completo** para tablas "Lazy".
+
+Aquí tienes el **README.md** actualizado con todas las nuevas "armas" que le pusimos (Búsqueda global, selección de columnas y el Trait):
 
 ---
 
 # Time Laravel Package ⏱️
 
-Este paquete es un motor de transformación de consultas para Laravel. Permite convertir peticiones de frontend (filtros, ordenamiento y paginación) directamente en consultas de base de datos optimizadas, con un enfoque especial en el **manejo inteligente de rangos de tiempo**.
+Este paquete es el puente inteligente entre tus modelos de Laravel y el componente **TiTableLazy**. Permite transformar cualquier consulta de base de datos en una API paginada, filtrable y optimizada con una configuración mínima.
 
-Está diseñado específicamente para alimentar componentes de tablas dinámicas como **TiTableLazy**.
+## 🚀 Novedades: "Pro" Features
 
-## 🚀 Características
+- **Búsqueda Global:** Configura múltiples columnas para buscar texto libre con una sola línea.
 
-- **Filtros en Lenguaje Natural:** Soporta `today`, `yesterday`, `this_week`, `this_month`.
+- **Selección Inteligente (`only`):** Optimiza el ancho de banda enviando solo las columnas necesarias.
 
-- **Filtros Dinámicos:** Detecta automáticamente rangos (separados por coma) o valores exactos.
+- **Trait `InteractsWithTiTable`:** Limpieza absoluta en tus controladores.
 
-- **Paginación Inteligente:** Adaptada al formato de respuesta que esperan los componentes modernos.
-
-- **Trait de Integración:** Incluye un Trait para limpiar tus controladores.
+- **Filtros de Tiempo:** Soporte nativo para `today`, `yesterday`, `this_week`, `this_month`.
 
 ---
 
@@ -24,58 +24,36 @@ Está diseñado específicamente para alimentar componentes de tablas dinámicas
 
 ### En Desarrollo (Local)
 
-Para trabajar en tu laboratorio (`time-lab`) vinculando el paquete que tienes en la carpeta de al lado, añade esto al `composer.json` de tu proyecto principal:
+Vincula el paquete localmente en el `composer.json` de tu proyecto:
 
 JSON
 
 ```
 "repositories": [
-    {
-        "type": "path",
-        "url": "../time-laravel-pkg"
-    }
+    { "type": "path", "url": "../time-laravel-pkg" }
 ],
 "require": {
     "time/laravel": "dev-main"
 }
 ```
 
-Luego ejecuta:
-
-Bash
-
-```
-composer update
-```
-
-### En Producción
-
-Una vez que subas el paquete a un repositorio privado o público (GitHub/GitLab):
-
-Bash
-
-```
-composer require time/laravel
-```
-
 ---
 
-## 🛰️ Cómo armar la API
+## 🛰️ Implementación Pro
 
-El paquete hace que tus controladores pasen de tener 50 líneas a solo 2.
+Ahora puedes usar el **Trait** para mantener tus controladores limpios y legibles.
 
-### 1. Usando el Trait en el Controlador
+### 1. En el Controlador
 
-Importa `InteractsWithTiTable` para habilitar el método `tiTableResponse`.
+Usa el método `tiTableResponse` y configura el comportamiento de la tabla mediante un callback:
 
 PHP
 
 ```
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Models\Log;
 use Illuminate\Http\Request;
-use App\Models\Log; // Tu modelo
 use Time\Laravel\InteractsWithTiTable;
 
 class LogController extends Controller
@@ -83,60 +61,53 @@ class LogController extends Controller
     use InteractsWithTiTable;
 
     public function index(Request $request)    {
-        // Puedes pasar un Modelo, un Query Builder o un DB::table
-        $query = Log::query(); 
+        // 1. Definimos la fuente de datos
+        $query = Log::query();
 
-        // El paquete procesa filtros, orden y devuelve el JSON
-        return $this->tiTableResponse($query, $request);
+        // 2. Configuramos y respondemos
+        return $this->tiTableResponse($query, $request, function($table) {
+            $table->only(['id', 'event_name', 'status', 'started_at']) // Optimización de columnas
+                  ->searchable(['event_name', 'status']);               // Búsqueda global
+        });
     }
 }
 ```
 
-### 2. Definición de la Ruta
-
-En tu archivo `routes/api.php`:
-
-PHP
-
-```
-use App\Http\Controllers\Api\LogController;
-
-Route::get('/logs', [LogController::class, 'index']);
-```
-
 ---
 
-## 🔍 Uso de la Query desde el Frontend
+## 🔍 API Query Guide
 
-El API responderá dinámicamente según los parámetros que reciba en la URL:
+El motor procesa automáticamente los siguientes parámetros enviados desde el frontend:
 
-| Parámetro           | Ejemplo                             | Resultado SQL                     |
-| ------------------- | ----------------------------------- | --------------------------------- |
-| **Filtro Simple**   | `filters[status]=error`             | `WHERE status = 'error'`          |
-| **Rango de Fechas** | `filters[at]=2026-01-01,2026-01-10` | `WHERE at BETWEEN ...`            |
-| **Atajo de Tiempo** | `filters[at]=this_month`            | `WHERE at` (rango del mes actual) |
-| **Orden**           | `sortField=id&sortOrder=-1`         | `ORDER BY id DESC`                |
-| **Paginación**      | `rows=50&page=2`                    | `LIMIT 50 OFFSET 50`              |
+| Parámetro   | Ejemplo                    | Acción                                                   |
+| ----------- | -------------------------- | -------------------------------------------------------- |
+| `search`    | `?search=error`            | Busca en todas las columnas definidas en `searchable()`. |
+| `filters`   | `?filters[status]=success` | Filtra por valor exacto.                                 |
+| `filters`   | `?filters[at]=today`       | Filtra usando atajos de tiempo dinámicos.                |
+| `sortField` | `?sortField=id`            | Define la columna de ordenamiento.                       |
+| `sortOrder` | `?sortOrder=-1`            | `-1` para DESC, `1` para ASC.                            |
+| `rows`      | `?rows=50`                 | Define cuántos registros traer por página.               |
 
 Exportar a Hojas de cálculo
 
 ---
 
-## 🏗️ Estructura de Consulta en el Modelo
+## ⚙️ Estructura del JSON de Respuesta
 
-Si necesitas que la consulta tenga filtros base (por ejemplo, solo logs del usuario autenticado) antes de que el paquete aplique los filtros de la tabla, hazlo así:
+El paquete siempre responde con el formato estándar que espera el componente de UI:
 
-PHP
+JSON
 
 ```
-public function index(Request $request)
 {
-    $query = Log::where('user_id', auth()->id())
-                ->where('active', true);
-
-    // El paquete respetará tus where anteriores y anidará los nuevos
-    return $this->tiTableResponse($query, $request);
+    "success": true,
+    "data": [...],
+    "total": 10500,
+    "page": 1,
+    "rows": 15
 }
 ```
 
+---
 
+### 

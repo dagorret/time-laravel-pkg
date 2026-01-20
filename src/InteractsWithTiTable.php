@@ -7,12 +7,17 @@ use Illuminate\Http\Request;
 trait InteractsWithTiTable
 {
     /**
-     * Responde con el formato JSON necesario para TiTableLazy
+     * Responde con formato TiTable.
+     * $config es una función opcional para añadir ->searchable() o ->only()
      */
-    protected function tiTableResponse($query, Request $request)
+    protected function tiTableResponse($query, Request $request, callable $config = null)
     {
-        return TimeTable::query($query)
-            ->apiHandle($request)
-            ->toTiTable();
+        $instance = TimeTable::query($query);
+
+        if ($config) {
+            $config($instance);
+        }
+
+        return $instance->apiHandle($request)->toTiTable();
     }
 }
