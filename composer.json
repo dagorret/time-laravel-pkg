@@ -1,0 +1,22 @@
+{
+    "name": "time/laravel",
+    "description": "Motor de filtrado y configuración dinámica para el Proyecto Time",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Time\\Laravel\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Time\\Laravel\\TimeServiceProvider"
+            ]
+        }
+    },
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^11.0|^12.0"
+    }
+}
